@@ -11,18 +11,19 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.parent
 
-# Load API key
-ENV_FILE = BASE_DIR / ".env"
-GEMINI_API_KEY = ""
-if ENV_FILE.exists():
-    with open(ENV_FILE, "r") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, value = line.split("=", 1)
-                if key.strip() == "GEMINI_API_KEY":
-                    GEMINI_API_KEY = value.strip()
-                    break
+# Load API key - check environment variables first (for Vercel), then .env file
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+if not GEMINI_API_KEY:
+    ENV_FILE = BASE_DIR / ".env"
+    if ENV_FILE.exists():
+        with open(ENV_FILE, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
+                    if key.strip() == "GEMINI_API_KEY":
+                        GEMINI_API_KEY = value.strip()
+                        break
 
 DB_PATH = BASE_DIR / "data" / "financial_data.db"
 PROCESSED_PATH = BASE_DIR / "data" / "processed" / "ETERNAL"
