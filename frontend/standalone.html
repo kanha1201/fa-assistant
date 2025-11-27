@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tensor - AI Financial Assistant | Groww</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React and ReactDOM from CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel Standalone for JSX transformation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Axios for API calls -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    
+    <!-- Lucide Icons (we'll use a simple SVG approach instead) -->
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', 'Roboto', system-ui, sans-serif;
+            background-color: #121212;
+            color: #FFFFFF;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            position: relative;
+        }
+        
+        #root {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            max-width: 400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            background-color: #121212;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1E1E1E;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #2C2C2E;
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 208, 156, 0.3);
+        }
+        
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        /* Futuristic Tensor color scheme */
+        .bg-groww-black { background-color: #121212; }
+        .bg-groww-surface { background-color: #1E1E1E; backdrop-filter: blur(10px); }
+        .bg-groww-chip { background-color: #2A2A2A; border: 1px solid rgba(0, 208, 156, 0.2); }
+        .bg-groww-mint { background-color: #00D09C; }
+        .bg-groww-coral { background-color: #EB5B3C; }
+        .text-groww-white { color: #FFFFFF; }
+        .text-groww-gray { color: rgba(255, 255, 255, 0.6); }
+        .text-groww-mint { color: #00D09C; }
+        .text-groww-coral { color: #EB5B3C; }
+        .border-groww-border { border-color: rgba(0, 208, 156, 0.2); }
+        .border-groww-chip-border { border-color: rgba(0, 208, 156, 0.2); }
+        
+        /* Glow effects - reduced spread */
+        .glow-teal {
+            text-shadow: 0 0 5px rgba(0, 208, 156, 0.4),
+                         0 0 8px rgba(0, 208, 156, 0.2);
+        }
+        
+        .glow-box {
+            box-shadow: 0 0 4px rgba(0, 208, 156, 0.2),
+                        0 0 6px rgba(0, 208, 156, 0.1);
+        }
+    </style>
+    
+    <script>
+        // Configure Tailwind
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'groww-black': '#121212',
+                        'groww-surface': '#1E1E1E',
+                        'groww-border': '#2C2C2E',
+                        'groww-chip': '#2A2A2A',
+                        'groww-chip-border': '#374151',
+                        'groww-mint': '#00D09C',
+                        'groww-coral': '#EB5B3C',
+                        'groww-white': '#FFFFFF',
+                        'groww-gray': '#9CA3AF',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+        
+        // API Service
+        const API_BASE_URL = 'http://localhost:8000';
+        
+        const apiService = {
+            async getSummary(companySymbol) {
+                const response = await axios.get(`${API_BASE_URL}/summary`, {
+                    params: { company_symbol: companySymbol }
+                });
+                return response.data;
+            },
+            async getRedFlags(companySymbol) {
+                const response = await axios.get(`${API_BASE_URL}/red-flags`, {
+                    params: { company_symbol: companySymbol }
+                });
+                return response.data;
+            },
+            async getBullBear(companySymbol) {
+                const response = await axios.get(`${API_BASE_URL}/bull-bear`, {
+                    params: { company_symbol: companySymbol }
+                });
+                return response.data;
+            },
+            async answerQuery(companySymbol, query) {
+                const response = await axios.get(`${API_BASE_URL}/chat/query`, {
+                    params: {
+                        company_symbol: companySymbol,
+                        query: query
+                    }
+                });
+                return response.data;
+            }
+        };
+        
+        // Icons as SVG components
+        const ArrowLeft = ({ size = 20, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+        );
+        
+        const MoreVertical = ({ size = 20, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+                <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
+            </svg>
+        );
+        
+        // Tensor Logo Component - Complex geometric wireframe polyhedron
+        const TensorLogo = ({ size = 80, className = "" }) => {
+            const centerX = 50;
+            const centerY = 50;
+            const outerRadius = 38;
+            const midRadius = 25;
+            const innerRadius = 12;
+            
+            // Create multiple concentric circles of points for complex structure
+            const outerPoints = [];
+            const midPoints = [];
+            const innerPoints = [];
+            const numOuter = 12;
+            const numMid = 8;
+            const numInner = 6;
+            
+            for (let i = 0; i < numOuter; i++) {
+                const angle = (i * 2 * Math.PI) / numOuter - Math.PI / 2;
+                outerPoints.push({
+                    x: centerX + outerRadius * Math.cos(angle),
+                    y: centerY + outerRadius * Math.sin(angle)
+                });
+            }
+            
+            for (let i = 0; i < numMid; i++) {
+                const angle = (i * 2 * Math.PI) / numMid - Math.PI / 2;
+                midPoints.push({
+                    x: centerX + midRadius * Math.cos(angle),
+                    y: centerY + midRadius * Math.sin(angle)
+                });
+            }
+            
+            for (let i = 0; i < numInner; i++) {
+                const angle = (i * 2 * Math.PI) / numInner - Math.PI / 2;
+                innerPoints.push({
+                    x: centerX + innerRadius * Math.cos(angle),
+                    y: centerY + innerRadius * Math.sin(angle)
+                });
+            }
+            
+            return (
+                <svg width={size} height={size} viewBox="0 0 100 100" className={className} style={{ filter: 'drop-shadow(0 0 15px rgba(0,208,156,0.8))' }}>
+                    <defs>
+                        <linearGradient id="tealToGreenGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#00D09C" stopOpacity="1" />
+                            <stop offset="50%" stopColor="#00E6B8" stopOpacity="1" />
+                            <stop offset="100%" stopColor="#7FFF00" stopOpacity="1" />
+                        </linearGradient>
+                        <radialGradient id="nodeGradient" cx="50%" cy="50%">
+                            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+                            <stop offset="50%" stopColor="#00D09C" stopOpacity="1" />
+                            <stop offset="100%" stopColor="#00D09C" stopOpacity="0.8" />
+                        </radialGradient>
+                        <filter id="glow">
+                            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                            <feMerge>
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                        </filter>
+                    </defs>
+                    
+                    {/* Center node */}
+                    <circle cx={centerX} cy={centerY} r="3.5" fill="url(#nodeGradient)" filter="url(#glow)" opacity="0.95" />
+                    
+                    {/* Inner ring nodes */}
+                    {innerPoints.map((point, i) => (
+                        <circle key={`inner-${i}`} cx={point.x} cy={point.y} r="2" fill="url(#nodeGradient)" filter="url(#glow)" opacity="0.85" />
+                    ))}
+                    
+                    {/* Mid ring nodes */}
+                    {midPoints.map((point, i) => (
+                        <circle key={`mid-${i}`} cx={point.x} cy={point.y} r="2.5" fill="url(#nodeGradient)" filter="url(#glow)" opacity="0.9" />
+                    ))}
+                    
+                    {/* Outer ring nodes */}
+                    {outerPoints.map((point, i) => (
+                        <circle key={`outer-${i}`} cx={point.x} cy={point.y} r="2.5" fill="url(#nodeGradient)" filter="url(#glow)" />
+                    ))}
+                    
+                    {/* Connect center to inner ring */}
+                    {innerPoints.map((point, i) => (
+                        <line key={`c-inner-${i}`} x1={centerX} y1={centerY} x2={point.x} y2={point.y} stroke="url(#tealToGreenGradient)" strokeWidth="1.3" filter="url(#glow)" opacity="0.85" />
+                    ))}
+                    
+                    {/* Connect inner to mid ring */}
+                    {innerPoints.map((point, i) => {
+                        const midPoint = midPoints[i % midPoints.length];
+                        return (
+                            <line key={`inner-mid-${i}`} x1={point.x} y1={point.y} x2={midPoint.x} y2={midPoint.y} stroke="url(#tealToGreenGradient)" strokeWidth="1.1" filter="url(#glow)" opacity="0.75" />
+                        );
+                    })}
+                    
+                    {/* Connect mid to outer ring */}
+                    {midPoints.map((point, i) => {
+                        const outerPoint = outerPoints[i % outerPoints.length];
+                        return (
+                            <line key={`mid-outer-${i}`} x1={point.x} y1={point.y} x2={outerPoint.x} y2={outerPoint.y} stroke="url(#tealToGreenGradient)" strokeWidth="1.2" filter="url(#glow)" opacity="0.8" />
+                        );
+                    })}
+                    
+                    {/* Connect outer points to form polygon */}
+                    {outerPoints.map((point, i) => {
+                        const nextPoint = outerPoints[(i + 1) % outerPoints.length];
+                        return (
+                            <line key={`outer-edge-${i}`} x1={point.x} y1={point.y} x2={nextPoint.x} y2={nextPoint.y} stroke="url(#tealToGreenGradient)" strokeWidth="1" filter="url(#glow)" opacity="0.7" />
+                        );
+                    })}
+                    
+                    {/* Connect mid points */}
+                    {midPoints.map((point, i) => {
+                        const nextPoint = midPoints[(i + 1) % midPoints.length];
+                        return (
+                            <line key={`mid-edge-${i}`} x1={point.x} y1={point.y} x2={nextPoint.x} y2={nextPoint.y} stroke="url(#tealToGreenGradient)" strokeWidth="1" filter="url(#glow)" opacity="0.65" />
+                        );
+                    })}
+                    
+                    {/* Connect inner points */}
+                    {innerPoints.map((point, i) => {
+                        const nextPoint = innerPoints[(i + 1) % innerPoints.length];
+                        return (
+                            <line key={`inner-edge-${i}`} x1={point.x} y1={point.y} x2={nextPoint.x} y2={nextPoint.y} stroke="url(#tealToGreenGradient)" strokeWidth="1" filter="url(#glow)" opacity="0.7" />
+                        );
+                    })}
+                    
+                    {/* Additional cross-connections for complexity */}
+                    {outerPoints.map((point, i) => {
+                        // Connect to points 3, 4, 6 steps away
+                        const connections = [3, 4, 6];
+                        return connections.map((offset, j) => {
+                            const targetIndex = (i + offset) % outerPoints.length;
+                            const targetPoint = outerPoints[targetIndex];
+                            return (
+                                <line
+                                    key={`cross-${i}-${j}`}
+                                    x1={point.x}
+                                    y1={point.y}
+                                    x2={targetPoint.x}
+                                    y2={targetPoint.y}
+                                    stroke="url(#tealToGreenGradient)"
+                                    strokeWidth="0.8"
+                                    filter="url(#glow)"
+                                    opacity="0.5"
+                                />
+                            );
+                        });
+                    })}
+                </svg>
+            );
+        };
+        
+        const Sparkles = TensorLogo; // Alias for compatibility
+        
+        const Loader2 = ({ size = 16, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`animate-spin ${className}`}>
+                <path d="M21 12a9 9 0 11-6.219-8.56"/>
+            </svg>
+        );
+        
+        const FileText = ({ size = 16, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+            </svg>
+        );
+        
+        const AlertTriangle = ({ size = 16, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+        );
+        
+        const TrendingUp = ({ size = 16, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+            </svg>
+        );
+        
+        const Send = ({ size = 18, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+        );
+        
+        // Header Component
+        const Header = () => {
+            return (
+                <div className="sticky top-0 z-50 bg-groww-surface border-b border-groww-border">
+                    <div className="flex items-center justify-between px-4 py-3 h-14">
+                        <button 
+                            className="p-2 -ml-2 text-groww-white hover:bg-groww-chip rounded-lg transition-colors"
+                            onClick={() => window.history.back()}
+                        >
+                            <ArrowLeft size={20} />
+                        </button>
+                        <div className="flex items-center gap-2">
+                            <div className="relative">
+                                <TensorLogo 
+                                    size={24}
+                                />
+                            </div>
+                            <span className="text-white font-semibold text-lg">
+                                <span className="text-groww-mint glow-teal">T</span>
+                                <span className="text-white">ensor</span>
+                            </span>
+                        </div>
+                        <button className="p-2 -mr-2 text-groww-white hover:bg-groww-chip rounded-lg transition-colors">
+                            <MoreVertical size={20} />
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+        
+        // Format message content with better structure
+        const formatMessageContent = (text) => {
+            let formatted = text;
+            
+            // Remove "Answer:" prefix if present
+            formatted = formatted.replace(/^Answer\s*:?\s*/i, '');
+            formatted = formatted.replace(/^Answer\s*:?\s*/i, '');
+            
+            // Extract and format disclaimer separately
+            const disclaimerPattern = /\*Generated by AI based on public data\.\s*Not a buy\/sell recommendation\.\s*Please consult your financial advisor\.\*/i;
+            let disclaimerHtml = '';
+            if (disclaimerPattern.test(formatted)) {
+                disclaimerHtml = '<div class="mt-4 pt-3 border-t border-groww-border"><p class="text-xs text-groww-gray leading-tight">Generated by AI based on public data. Not a buy/sell recommendation. Please consult your financial advisor.</p></div>';
+                formatted = formatted.replace(disclaimerPattern, '').trim();
+            }
+            
+            // Track icon count (max 5)
+            let iconCount = 0;
+            const maxIcons = 5;
+            
+            // Split into paragraphs first
+            const paragraphs = formatted.split(/\n\n+/);
+            
+            // Process each paragraph
+            formatted = paragraphs.map(para => {
+                let p = para.trim();
+                if (!p) return '';
+                
+                // Convert markdown bold to HTML
+                p = p.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-white">$1</strong>');
+                
+                // Convert single asterisk italic (but not bullet points)
+                p = p.replace(/(?<!^|\n)\*([^*\n]+?)\*(?!\*)/g, '<em class="italic">$1</em>');
+                
+                // Format headings (lines with **text** or ALL CAPS followed by colon)
+                if (p.match(/^\*\*[^*]+\*\*$/m) || p.match(/^[A-Z][^:]+:$/m)) {
+                    p = p.replace(/^\*\*([^*]+)\*\*$/m, '<div class="font-semibold text-groww-mint mt-4 mb-2 text-base">$1</div>');
+                    p = p.replace(/^([A-Z][^:]+):$/m, '<div class="font-semibold text-groww-mint mt-4 mb-2 text-base">$1</div>');
+                }
+                
+                // Format bullet points with better spacing and line breaks
+                p = p.replace(/^[-•]\s+(.+)$/gm, '<div class="flex items-start gap-2 my-2"><span class="text-groww-mint mt-1 flex-shrink-0">•</span><span>$1</span></div>');
+                p = p.replace(/^(\d+\.)\s+(.+)$/gm, '<div class="flex items-start gap-2 my-2"><span class="text-groww-mint font-semibold flex-shrink-0">$1</span><span>$2</span></div>');
+                
+                // Add line breaks before new points/sentences starting with capital letters
+                p = p.replace(/([.!?])\s+([A-Z][^.!?]*)/g, '$1<br /><br />$2');
+                
+                // Convert single line breaks within paragraph
+                p = p.replace(/\n(?![-•\d])/g, '<br />');
+                
+                return p;
+            }).filter(p => p).join('<div class="mt-3"></div>');
+            
+            // Add icons selectively - only at important points (max 5 total)
+            // Only add icons to headings and key metrics, not every occurrence
+            const iconPatterns = [
+                { pattern: /\*\*(Revenue|Adjusted Revenue|NOV|Growth)\*\*/gi, icon: '📈', priority: 1 },
+                { pattern: /\*\*(EBITDA|Profit|Margin|Profitability)\*\*/gi, icon: '💰', priority: 1 },
+                { pattern: /\*\*(P\/E|P\/B|ROE|Debt|Valuation)\*\*/gi, icon: '📊', priority: 1 },
+                { pattern: /\*\*(Risk|Red Flag|Warning)\*\*/gi, icon: '⚠️', priority: 2 },
+                { pattern: /\*\*(Bull Case|Bear Case)\*\*/gi, icon: (match) => match.includes('Bull') ? '🐂' : '🐻', priority: 2 }
+            ];
+            
+            // Sort by priority (higher first) and apply icons
+            iconPatterns.sort((a, b) => b.priority - a.priority);
+            
+            for (const { pattern, icon, priority } of iconPatterns) {
+                if (iconCount >= maxIcons) break;
+                
+                formatted = formatted.replace(pattern, (match) => {
+                    if (iconCount >= maxIcons) return match;
+                    iconCount++;
+                    const iconStr = typeof icon === 'function' ? icon(match) : icon;
+                    return `${iconStr} ${match}`;
+                });
+            }
+            
+            return `<div>${formatted}${disclaimerHtml}</div>`;
+        };
+        
+        // Message Bubble Component
+        const MessageBubble = ({ role, content }) => {
+            const isUser = role === 'user';
+            
+            return (
+                <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                    <div
+                        className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                            isUser
+                                ? 'bg-groww-mint text-groww-black rounded-br-sm glow-box'
+                                : 'bg-groww-surface text-groww-white border border-groww-border rounded-bl-sm glow-box'
+                        }`}
+                    >
+                        {isUser ? (
+                            <p className="text-sm font-medium whitespace-pre-wrap break-words">{content}</p>
+                        ) : (
+                            <div 
+                                className="text-sm leading-relaxed break-words"
+                                dangerouslySetInnerHTML={{ 
+                                    __html: formatMessageContent(content)
+                                }}
+                            />
+                        )}
+                    </div>
+                </div>
+            );
+        };
+        
+        // Chat Area Component
+        const ChatArea = ({ messages, isLoading, chatEndRef, messageStartRef }) => {
+            const hasMessages = messages.length > 0;
+            
+            return (
+                <div className="flex-1 overflow-y-auto px-4 py-6">
+                    {!hasMessages ? (
+                        <div className="flex flex-col items-center justify-center h-full -mt-20">
+                            <div className="relative mb-6">
+                                <TensorLogo 
+                                    size={100}
+                                />
+                            </div>
+                            <p className="text-center text-groww-gray text-sm max-w-[280px] leading-relaxed">
+                                Hi, I'm <span className="text-groww-mint glow-teal font-medium">Tensor</span>. Your AI-assistant to help answer your questions about the fundamentals of{' '}
+                                <span className="text-groww-mint glow-teal font-medium">Eternal</span>.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4 pb-4">
+                            {messages.map((message, index) => {
+                                const isLastAssistant = index === messages.length - 1 && message.role === 'assistant';
+                                return (
+                                    <div key={index} ref={isLastAssistant ? messageStartRef : null}>
+                                        <MessageBubble 
+                                            role={message.role}
+                                            content={message.content}
+                                        />
+                                    </div>
+                                );
+                            })}
+                            {isLoading && (
+                                <div className="flex items-center gap-2 text-groww-gray">
+                                    <Loader2 size={16} />
+                                    <span className="text-sm">Tensor is thinking...</span>
+                                </div>
+                            )}
+                            <div ref={chatEndRef} />
+                        </div>
+                    )}
+                </div>
+            );
+        };
+        
+        // Quick Action Chips Component
+        const QuickActionChips = ({ onActionClick, disabled }) => {
+            const actions = [
+                { id: 'summarise', label: 'Summarise', icon: FileText, color: 'text-groww-white' },
+                { id: 'red_flags', label: 'Red Flags', icon: AlertTriangle, color: 'text-groww-coral' },
+                { id: 'bull_bear', label: 'Bull/Bear', icon: TrendingUp, color: 'text-groww-white' },
+            ];
+            
+            return (
+                <div className="flex gap-2 mb-3 overflow-x-auto pb-2 scrollbar-hide">
+                    {actions.map((action) => {
+                        const Icon = action.icon;
+                        return (
+                            <button
+                                key={action.id}
+                                onClick={() => !disabled && onActionClick(action.id)}
+                                disabled={disabled}
+                                className={`
+                                    flex items-center gap-2 px-4 py-2 rounded-full
+                                    bg-groww-chip border border-groww-chip-border
+                                    ${action.color} text-sm font-medium
+                                    transition-all duration-200
+                                    ${disabled 
+                                        ? 'opacity-50 cursor-not-allowed' 
+                                        : 'hover:bg-groww-chip hover:border-groww-mint hover:glow-box active:scale-95'
+                                    }
+                                    whitespace-nowrap
+                                `}
+                            >
+                                <Icon size={16} />
+                                <span>{action.label}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            );
+        };
+        
+        // Input Field Component
+        const InputField = ({ onSend, disabled }) => {
+            const [input, setInput] = useState('');
+            
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (input.trim() && !disabled) {
+                    onSend(input.trim());
+                    setInput('');
+                }
+            };
+            
+            const handleKeyPress = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit(e);
+                }
+            };
+            
+            return (
+                <form onSubmit={handleSubmit} className="relative">
+                    <div className="flex items-center gap-2 bg-groww-surface rounded-2xl px-4 py-3 border border-groww-border glow-box">
+                        <input
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder="Ask about Eternal's financials..."
+                            disabled={disabled}
+                            className="flex-1 bg-transparent text-groww-white placeholder-groww-gray text-sm outline-none"
+                        />
+                        <button
+                            type="submit"
+                            disabled={!input.trim() || disabled}
+                            className={`
+                                p-2 rounded-full transition-all duration-200
+                                ${input.trim() && !disabled
+                                    ? 'bg-groww-mint text-groww-black hover:bg-groww-mint hover:opacity-90 active:scale-95 glow-box'
+                                    : 'bg-groww-chip text-groww-gray cursor-not-allowed'
+                                }
+                            `}
+                        >
+                            <Send size={18} />
+                        </button>
+                    </div>
+                </form>
+            );
+        };
+        
+        // Main App Component
+        const App = () => {
+            const [messages, setMessages] = useState([]);
+            const [isLoading, setIsLoading] = useState(false);
+            const chatEndRef = useRef(null);
+            const messageStartRef = useRef(null);
+            const companySymbol = 'ETERNAL';
+            
+            // Scroll behavior: only scroll for user messages, keep position for assistant messages
+            useEffect(() => {
+                const lastMessage = messages[messages.length - 1];
+                if (lastMessage && lastMessage.role === 'user') {
+                    // User message - scroll to show it
+                    setTimeout(() => {
+                        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                } else if (lastMessage && lastMessage.role === 'assistant') {
+                    // Assistant message - scroll to start of the message, not end
+                    setTimeout(() => {
+                        messageStartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                }
+            }, [messages]);
+            
+            const handleQuickAction = async (action) => {
+                setIsLoading(true);
+                
+                try {
+                    let response;
+                    switch (action) {
+                        case 'summarise':
+                            response = await apiService.getSummary(companySymbol);
+                            addMessage('assistant', response.summary || response.full_response || 'Summary not available');
+                            break;
+                        case 'red_flags':
+                            response = await apiService.getRedFlags(companySymbol);
+                            const redFlagsText = response.red_flags?.map(flag => 
+                                `• ${flag.description || flag}`
+                            ).join('\n') || response.full_response || 'No red flags data available';
+                            addMessage('assistant', redFlagsText);
+                            break;
+                        case 'bull_bear':
+                            response = await apiService.getBullBear(companySymbol);
+                            const bullBearText = response.full_response || 
+                                `**Bull Case:**\n${response.bull_case?.join('\n') || 'N/A'}\n\n**Bear Case:**\n${response.bear_case?.join('\n') || 'N/A'}`;
+                            addMessage('assistant', bullBearText);
+                            break;
+                        default:
+                            break;
+                    }
+                } catch (error) {
+                    console.error('Error fetching quick action:', error);
+                    addMessage('assistant', 'Sorry, I encountered an error. Please make sure the backend API is running on http://localhost:8000');
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            
+            const handleSendMessage = async (text) => {
+                if (!text.trim() || isLoading) return;
+                
+                addMessage('user', text);
+                setIsLoading(true);
+                
+                try {
+                    const response = await apiService.answerQuery(companySymbol, text);
+                    addMessage('assistant', response.answer || 'Sorry, I could not process your request.');
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    addMessage('assistant', 'Sorry, I encountered an error. Please make sure the backend API is running on http://localhost:8000');
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            
+            const addMessage = (role, content) => {
+                setMessages(prev => [...prev, { role, content, timestamp: new Date() }]);
+            };
+            
+            return (
+                <div className="flex flex-col h-screen max-w-[400px] mx-auto bg-groww-black border-l border-r border-white border-opacity-10">
+                    <Header />
+                    <ChatArea 
+                        messages={messages} 
+                        isLoading={isLoading}
+                        chatEndRef={chatEndRef}
+                        messageStartRef={messageStartRef}
+                    />
+                    <div className="flex-shrink-0 pb-4 px-4">
+                        <QuickActionChips 
+                            onActionClick={handleQuickAction}
+                            disabled={isLoading}
+                        />
+                        <InputField 
+                            onSend={handleSendMessage}
+                            disabled={isLoading}
+                        />
+                    </div>
+                </div>
+            );
+        };
+        
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .7; transform: scale(1.05); }
+        }
+        @keyframes glow {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(0,208,156,0.5)); }
+            50% { filter: drop-shadow(0 0 20px rgba(0,208,156,0.8)); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        /* Circuit board pattern overlay */
+        .circuit-pattern {
+            background-image: 
+                linear-gradient(90deg, rgba(0,208,156,0.03) 1px, transparent 1px),
+                linear-gradient(rgba(0,208,156,0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+    </style>
+</body>
+</html>
+
