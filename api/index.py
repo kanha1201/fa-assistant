@@ -10,12 +10,26 @@ BASE_DIR = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
 # Import functions from standalone API
-from scripts.run_api_standalone import (
-    get_summary,
-    get_red_flags,
-    get_bull_bear,
-    answer_query
-)
+try:
+    from scripts.run_api_standalone import (
+        get_summary,
+        get_red_flags,
+        get_bull_bear,
+        answer_query
+    )
+except ImportError:
+    # Fallback: import directly if scripts path doesn't work
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "run_api_standalone",
+        BASE_DIR / "scripts" / "run_api_standalone.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    get_summary = module.get_summary
+    get_red_flags = module.get_red_flags
+    get_bull_bear = module.get_bull_bear
+    answer_query = module.answer_query
 
 app = FastAPI(title="Tensor API", version="1.0.0")
 
