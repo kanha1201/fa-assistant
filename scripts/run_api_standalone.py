@@ -131,17 +131,37 @@ def is_predictive_question(query):
 
 
 def is_greeting(query):
-    """Check if query is a greeting."""
+    """Check if query is a greeting or non-financial conversational question."""
     import re
     query_lower = query.strip().lower()
-    patterns = [
+    
+    # Exact greeting patterns
+    greeting_patterns = [
         r"^(hi|hello|hey|greetings)$",
         r"^(thanks|thank you|thx)$",
         r"^(bye|goodbye|see you)$",
     ]
-    for pattern in patterns:
+    for pattern in greeting_patterns:
         if re.match(pattern, query_lower):
             return True
+    
+    # Conversational questions (non-financial)
+    conversational_patterns = [
+        r"^how are you",
+        r"^how do you do",
+        r"^what's up",
+        r"^whats up",
+        r"^how's it going",
+        r"^how is it going",
+        r"^how are things",
+        r"^what are you",
+        r"^who are you",
+        r"^tell me about yourself",
+    ]
+    for pattern in conversational_patterns:
+        if re.match(pattern, query_lower):
+            return True
+    
     return False
 
 
