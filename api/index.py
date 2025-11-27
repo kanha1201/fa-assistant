@@ -9,6 +9,12 @@ from pathlib import Path
 BASE_DIR = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
+# Set environment variable for Gemini API key if available in Vercel
+# Vercel environment variables are automatically available via os.environ
+if 'GEMINI_API_KEY' in os.environ:
+    # Ensure the .env file logic in run_api_standalone.py can use this
+    os.environ['GEMINI_API_KEY'] = os.environ['GEMINI_API_KEY']
+
 # Import functions from standalone API
 try:
     from scripts.run_api_standalone import (
