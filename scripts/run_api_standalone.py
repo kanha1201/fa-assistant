@@ -32,7 +32,7 @@ PROCESSED_PATH = BASE_DIR / "data" / "processed" / "ETERNAL"
 def call_gemini_api(prompt):
     """Call Gemini API using urllib."""
     if not GEMINI_API_KEY:
-        return "Error: API key not found"
+        return "Error: API key not found. Please check your .env file or GEMINI_API_KEY environment variable."
     
     models_to_try = [
         "gemini-2.5-flash",
@@ -41,6 +41,7 @@ def call_gemini_api(prompt):
     ]
     
     base_url = "https://generativelanguage.googleapis.com/v1beta"
+    last_error = None
     
     for model in models_to_try:
         try:
@@ -63,10 +64,24 @@ def call_gemini_api(prompt):
                 
                 if 'candidates' in result and len(result['candidates']) > 0:
                     return result['candidates'][0]['content']['parts'][0]['text']
+                elif 'error' in result:
+                    last_error = f"API Error: {result['error'].get('message', 'Unknown error')}"
+                    continue
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode('utf-8') if hasattr(e, 'read') else str(e)
+            last_error = f"HTTP {e.code}: {error_body[:200]}"
+            if e.code == 400:
+                # Bad request - don't try other models
+                break
+            continue
         except Exception as e:
+            last_error = f"Error: {str(e)[:200]}"
             continue
     
-    return "Error: Could not connect to Gemini API"
+    # Return more detailed error message
+    if last_error:
+        return f"Error: Could not connect to Gemini API. {last_error}"
+    return "Error: Could not connect to Gemini API. Please check your API key and network connection."
 
 
 def get_company_data():
