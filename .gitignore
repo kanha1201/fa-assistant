@@ -27,10 +27,14 @@ wheels/
 .env
 .env.local
 
-# Data
-data/
+# Data (exclude most, but allow essential files for deployment)
+data/documents/
+data/vector_db/
 *.db
 *.sqlite
+!data/financial_data.db
+# Allow processed data
+!data/processed/
 
 # Logs
 logs/
