@@ -682,27 +682,27 @@
                     switch (action) {
                         case 'summarise':
                             response = await apiService.getSummary(companySymbol);
-                            addMessage('assistant', response.summary || response.full_response || 'Summary not available');
+                            addMessage('assistant', response.summary || response.full_response || 'Summary not available', response.sources, response.has_financial_context);
                             break;
                         case 'red_flags':
                             response = await apiService.getRedFlags(companySymbol);
                             const redFlagsText = response.red_flags?.map(flag => 
                                 `• ${flag.description || flag}`
                             ).join('\n') || response.full_response || 'No red flags data available';
-                            addMessage('assistant', redFlagsText);
+                            addMessage('assistant', redFlagsText, response.sources, response.has_financial_context);
                             break;
                         case 'bull_bear':
                             response = await apiService.getBullBear(companySymbol);
                             const bullBearText = response.full_response || 
                                 `**Bull Case:**\n${response.bull_case?.join('\n') || 'N/A'}\n\n**Bear Case:**\n${response.bear_case?.join('\n') || 'N/A'}`;
-                            addMessage('assistant', bullBearText);
+                            addMessage('assistant', bullBearText, response.sources, response.has_financial_context);
                             break;
                         default:
                             break;
                     }
                 } catch (error) {
                     console.error('Error fetching quick action:', error);
-                    addMessage('assistant', 'Sorry, I encountered an error. Please make sure the backend API is running on http://localhost:8000');
+                    addMessage('assistant', 'Sorry, I encountered an error. Please make sure the backend API is running on http://localhost:8000', null, false);
                 } finally {
                     setIsLoading(false);
                 }
@@ -716,17 +716,17 @@
                 
                 try {
                     const response = await apiService.answerQuery(companySymbol, text);
-                    addMessage('assistant', response.answer || 'Sorry, I could not process your request.');
+                    addMessage('assistant', response.answer || 'Sorry, I could not process your request.', response.sources, response.has_financial_context !== false);
                 } catch (error) {
                     console.error('Error sending message:', error);
-                    addMessage('assistant', 'Sorry, I encountered an error. Please make sure the backend API is running on http://localhost:8000');
+                    addMessage('assistant', 'Sorry, I encountered an error. Please make sure the backend API is running on http://localhost:8000', null, false);
                 } finally {
                     setIsLoading(false);
                 }
             };
             
-            const addMessage = (role, content) => {
-                setMessages(prev => [...prev, { role, content, timestamp: new Date() }]);
+            const addMessage = (role, content, sources = null, hasFinancialContext = false) => {
+                setMessages(prev => [...prev, { role, content, sources, hasFinancialContext, timestamp: new Date() }]);
             };
             
             return (
